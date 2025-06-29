@@ -38,7 +38,7 @@ class MCPHandler(http.server.SimpleHTTPRequestHandler):
             server_name = list(mcp_servers.keys())[0]
             server_info = mcp_servers[server_name]
 
-            command = ["~/go/bin/mcphost", "-m", "ollama:qwen2.5:7b-instruct","-p", prompt,"--quiet"]
+            command = ["mcphost", "-m", "ollama:qwen2.5:7b-instruct","-p", prompt,"--quiet"]
             command[0] = os.path.expanduser(command[0])
 
             # Print input prompt to command line
