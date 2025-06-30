@@ -30,6 +30,8 @@ port = 8080
 domain = os.getenv("WEBHOOK_DOMAIN")
 inbox = f"feedback-agent@agentmail.to"
 
+mcp_url = "http://localhost:8000"
+
 listener = ngrok.forward(port, domain=domain, authtoken_from_env=True)
 app = Flask(__name__)
 
@@ -41,23 +43,13 @@ def receive_webhook():
     Thread(target=process_webhook, args=(request.json,)).start()
     return Response(status=200)
 
-
-def process_webhook(payload):
-    global messages
-
-    email = payload["message"]
-
-    # print(f"Received {email}")
-
+# currently has agent resummarize first
+def send_initial_email(email):
     prompt = "You are an assistant tasks with gathering feedback. The following message contains a list of questions to ask various emails. Summarize the questions and the email list."
     prompt += f"email: {email['text']}"
     prompt += "Summarize the questions and the email list."
-    # one strategy could be to make the agent summarize things first
 
-    # prompt += f"Using the agent mail tool, send an email from the inbox id {inbox} to the previously mentioned emails. USE A NEW TOOL CALL FOR EACH EMAIL IN THE LIST."
-
-    # print prompt in a different color
-    printColor(prompt, "green")
+    printColor(f"Prompt:\n{prompt}\n", "green")
 
     # there's a refactor chance here
     url = "http://localhost:8000"
@@ -68,11 +60,46 @@ def process_webhook(payload):
         data = response.json()
         printColor(data["stdout"], "blue")
         printColor(data["stdout"], "blue")
+        
+        # code that sends emails to the specific agents
         followup_prompt = data["stdout"]
-        followup_prompt += f"\nUsing the agent mail tool, send an email from the inbox id {inbox} to the previously mentioned emails. USE A NEW TOOL CALL FOR EACH EMAIL IN THE LIST."
+        followup_prompt += f"\nUsing the agent mail tool, send an email from the inbox id {inbox} to the previously mentioned emails. USE A NEW TOOL CALL FOR EACH EMAIL IN THE LIST." 
 
         printColor(followup_prompt, "green")
 
+        payload = {"prompt": followup_prompt}
+        response = requests.post(mcp_url, json=payload)
+        response.raise_for_status()
+        data = response.json()
+        printColor(data["stdout"], "blue")
+
+    except requests.RequestException as e:
+        print(f"HTTP Request failed: {e}")
+    except Exception as e:
+        print(f"Error: {e}")
+
+
+def send_summarize_email(email):
+    prompt = "You are an assistant tasks with gathering feedback. The following message contains a list of questions to ask various emails. Summarize the questions and the email list."
+    prompt += f"email: {email['text']}"
+    prompt += "Summarize the questions and the email list."
+
+    printColor(f"Prompt:\n{prompt}\n", "green")
+
+    # there's a refactor chance here
+    payload = {"prompt": prompt}
+    try:
+        response = requests.post(mpc_url, json=payload)
+        response.raise_for_status()
+        data = response.json()
+        printColor(data["stdout"], "blue")
+        printColor(data["stdout"], "blue")
+        
+        # code that sends emails to the specific agents
+        followup_prompt = data["stdout"]
+        followup_prompt += f"\nUsing the agent mail tool, send an email from the inbox id {inbox} to the previously mentioned emails. USE A NEW TOOL CALL FOR EACH EMAIL IN THE LIST." 
+
+        printColor(followup_prompt, "green")
 
         payload = {"prompt": followup_prompt}
         response = requests.post(url, json=payload)
@@ -85,21 +112,34 @@ def process_webhook(payload):
     except Exception as e:
         print(f"Error: {e}")
 
+# multiple hooks will be going through this endpoint
+def process_webhook(payload):
+    global messages
+
+    email = payload["message"]
+    print(f"Received {email}")
+    print(f"from: {email['from']}")
+    print(f"subject: {email['subject']}")
+    print(f"to: {email['to']}")
+
+    if "feedback-agent@agentmail.to" in email['to']:
+        print("email to feedback agent")
+        if 'survey' in email['subject'].lower() and 'Re:' not in email['subject']:
+            printColor(f"Received survey email:\n", "yellow")
+            # send_initial_email()
+        elif 'summarize' in email['subject'].lower():
+            printColor(f"Received summarize email:\n", "yellow")
+
+
+
+
+
+    # building a stateful situation to handle multiple kinds of commands
+
+    # print(f"Received {email}")
+
 
 #     prompt = f"""
-# From: {email["from"]}
-# Subject: {email["subject"]}
-# Body:\n{email["text"]}
-# """
-# print("Prompt:\n\n", prompt, "\n")
-
-# response = asyncio.run(Runner.run(agent, messages + [{"role": "user", "content": prompt}]))
-# print("Response:\n\n", response.final_output, "\n")
-
-# client.messages.reply(inbox_id=inbox, message_id=email["message_id"], text=response.final_output)
-
-# messages = response.to_input_list()
-
 
 if __name__ == "__main__":
     print(f"Inbox: {inbox}\n")
