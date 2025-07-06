@@ -45,7 +45,7 @@ def receive_webhook():
 
 # currently has agent resummarize first
 def send_initial_email(email):
-    prompt = "You are an assistant tasks with gathering feedback. The following message contains a list of questions to ask various emails. Summarize the questions and the email list."
+    prompt = "You are an assistant tasked with gathering feedback. The following message contains a list of questions to ask various emails. Summarize the questions and the email list."
     prompt += f"email: {email['text']}"
     prompt += "Summarize the questions and the email list."
 
@@ -80,7 +80,7 @@ def send_initial_email(email):
 
 
 def send_summarize_email(email):
-    prompt = "You are an assistant tasks with gathering feedback. The following message contains a list of questions to ask various emails. Summarize the questions and the email list."
+    prompt = "You are an assistant tasks with summarizing feedback. The following message contains a topic to search the inbox for:"
     prompt += f"email: {email['text']}"
     prompt += "Summarize the questions and the email list."
 
@@ -89,7 +89,7 @@ def send_summarize_email(email):
     # there's a refactor chance here
     payload = {"prompt": prompt}
     try:
-        response = requests.post(mpc_url, json=payload)
+        response = requests.post(mcp_url, json=payload)
         response.raise_for_status()
         data = response.json()
         printColor(data["stdout"], "blue")
