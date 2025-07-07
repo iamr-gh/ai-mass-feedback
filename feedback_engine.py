@@ -6,25 +6,9 @@ import ngrok
 import requests
 from flask import Flask, request, Response
 
+from utils import printColor
+
 from agentmail import AgentMail
-
-def printColor(text, color):
-    if color == "green":
-        color_code = "\033[92m"
-    elif color == "red":
-        color_code = "\033[91m"
-    elif color == "blue":
-        color_code = "\033[94m"
-    elif color == "yellow":
-        color_code = "\033[93m"
-    else:
-        color_code = "\033[0m"
-
-    print(color_code)
-    print(text)
-    print("\033[0m")
-
-
 
 port = 8080
 domain = os.getenv("WEBHOOK_DOMAIN")
